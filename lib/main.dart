@@ -21,7 +21,7 @@ void main() async {
       messagingSenderId: "512564352355",
       projectId: "build-lead-market",
       authDomain: "build-lead-market.firebaseapp.com",
-      storageBucket: "build-lead-market.appspot.com",
+      storageBucket: "build-lead-market.firebasestorage.app", // Updated storage bucket
       measurementId: "G-T9JSM35Q2B",
     ),
   );

@@ -1,166 +1,123 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/lead_model.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
 
   @override
-  State<LoginScreen> createState() => _$LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _$LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _nameController = TextEditingController();
-  
-  bool _isLoginMode = true;
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _firmController = TextEditingController();
+  final TextEditingController _adminPassController = TextEditingController();
+
   bool _isClientRole = false; // false = Contractor, true = Client
   bool _isLoading = false;
-
-  // Secret admin code trigger handler
   int _logoTapCount = 0;
+
+  // Secret Admin Dialog trigger on triple tap of logo
   void _handleLogoTap() {
     _logoTapCount++;
-    if (_logoTapCount >= 5) {
+    if (_logoTapCount >= 3) {
       _logoTapCount = 0;
-      _showAdminPasswordDialog();
+      _showAdminLoginDialog();
     }
   }
 
-  void _showAdminPasswordDialog() {
-    final passController = TextEditingController();
+  void _showAdminLoginDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Admin Records Access'),
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('Admin Confidential Access', style: TextStyle(color: Colors.white, fontSize: 16)),
         content: TextField(
-          controller: passController,
+          controller: _adminPassController,
           obscureText: true,
-          decoration: const InputDecoration(hintText: 'Enter Admin Password'),
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            labelText: 'Enter Admin Passcode',
+            labelStyle: const TextStyle(color: Colors.white70),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B)),
             onPressed: () {
-              if (passController.text == 'admin123') {
+              if (_adminPassController.text.trim() == 'admin123') {
+                _adminPassController.clear();
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/admin_records');
               } else {
-                Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Incorrect Admin Password!')),
+                  const SnackBar(content: Text('Incorrect Admin Passcode!')),
                 );
               }
             },
-            child: const Text('Login'),
+            child: const Text('Access Admin', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _submitAuth() async {
-    final email = _emailController.text.trim();
-    final password = _passwordController.text.trim();
-    final name = _nameController.text.trim();
-
-    if (email.isEmpty || password.isEmpty || (!_isLoginMode && name.isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields!')),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      if (_isLoginMode) {
-        // Sign In
-        await FirebaseAuth.instance.signInWithEmailAndPassword(email: email, password: password);
-      } else {
-        // Sign Up
-        UserCredential userCred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: email, 
-          password: password,
-        );
-
-        // Save user data to respective Firestore collection based on role
-        String collectionName = _isClientRole ? 'clients' : 'contractors';
-        await FirebaseFirestore.instance.collection(collectionName).doc(userCred.user!.uid).set({
-          'uid': userCred.user!.uid,
-          'name': name,
-          'email': email,
-          'role': _isClientRole ? 'Client' : 'Contractor',
-          'createdAt': Timestamp.now(),
-        });
-      }
-
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home');
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFF0F172A),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 420),
-            padding: const EdgeInsets.all(32),
+            constraints: const BoxConstraints(maxWidth: 450),
+            padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.white.withOpacity(0.05),
               borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  blurRadius: 15,
-                  offset: const Offset(0, 5),
-                ),
-              ],
+              border: Border.all(color: Colors.white24),
             ),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Logo with Secret Tap Handler for Admin
                 GestureDetector(
                   onTap: _handleLogoTap,
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.business_center, size: 40, color: Colors.amber),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.engineering, color: Color(0xFFF59E0B), size: 30),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'BuildLead Market',
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
-                  'BuildLead Market',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
-                ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
-                  _isLoginMode ? 'Sign in to access leads' : 'Create a new account',
-                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  _isClientRole ? 'Client Project Posting Portal' : 'Contractor Registration & Login Portal',
+                  style: const TextStyle(fontSize: 14, color: Colors.white70),
                 ),
-                const SizedBox(height: 24),
-
-                // Role Selector Toggle (Contractor vs Client)
+                const SizedBox(height: 20),
+                
+                // Role Selector Toggle (Client vs Contractor)
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: Colors.black26,
                     borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.white12),
                   ),
                   child: Row(
                     children: [
@@ -171,15 +128,14 @@ class _$LoginScreenState extends State<LoginScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: !_isClientRole ? const Color(0xFF1E293B) : Colors.transparent,
+                              color: !_isClientRole ? const Color(0xFFF59E0B) : Colors.transparent,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               'Contractor',
                               style: TextStyle(
-                                color: !_isClientRole ? Colors.white : Colors.black87,
+                                color: !_isClientRole ? const Color(0xFF0F172A) : Colors.white70,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 13,
                               ),
                             ),
                           ),
@@ -192,15 +148,14 @@ class _$LoginScreenState extends State<LoginScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: _isClientRole ? const Color(0xFF1E293B) : Colors.transparent,
+                              color: _isClientRole ? const Color(0xFFF59E0B) : Colors.transparent,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               'Client',
                               style: TextStyle(
-                                color: _isClientRole ? Colors.white : Colors.black87,
+                                color: _isClientRole ? const Color(0xFF0F172A) : Colors.white70,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 13,
                               ),
                             ),
                           ),
@@ -209,75 +164,175 @@ class _$LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-
-                // Name field (only for Sign Up)
-                if (!_isLoginMode) ...[
-                  TextField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Full Name / Company Name',
-                      prefixIcon: const Icon(Icons.person_outline),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-
-                // Email field
+                const SizedBox(height: 24),
                 TextField(
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
+                  controller: _nameController,
+                  style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    labelText: 'Email Address',
-                    prefixIcon: const Icon(Icons.email_outlined),
+                    labelText: 'Full Name *',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    prefixIcon: const Icon(Icons.person, color: Colors.amber),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.05),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
-                const SizedBox(height: 16),
-
-                // Password field
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Mobile Number (10 digits) *',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    prefixIcon: const Icon(Icons.phone, color: Colors.amber),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.05),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _emailController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Email Address *',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    prefixIcon: const Icon(Icons.email, color: Colors.amber),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.05),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+                const SizedBox(height: 14),
                 TextField(
                   controller: _passwordController,
                   obscureText: true,
+                  style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
+                    labelText: 'Password (min 6 chars) *',
+                    labelStyle: const TextStyle(color: Colors.white70),
+                    prefixIcon: const Icon(Icons.lock, color: Colors.amber),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.05),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   ),
                 ),
+                if (!_isClientRole) ...[
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _firmController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Firm / Company Name',
+                      labelStyle: const TextStyle(color: Colors.white70),
+                      prefixIcon: const Icon(Icons.business, color: Colors.amber),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.05),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 24),
-
-                // Submit Button
                 SizedBox(
                   width: double.infinity,
-                  height: 48,
+                  height: 50,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFF59E0B),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
-                    onPressed: _isLoading ? null : _submitAuth,
-                    child: _isLoading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                          )
-                        : Text(
-                            _isLoginMode ? 'Sign In' : 'Register as ${_isClientRole ? "Client" : "Contractor"}',
-                            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                    onPressed: _isLoading
+                        ? null
+                        : () async {
+                            if (_nameController.text.trim().isEmpty ||
+                                _phoneController.text.trim().length != 10 ||
+                                _emailController.text.trim().isEmpty ||
+                                _passwordController.text.trim().length < 6) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Please enter valid Name, 10-digit Phone, Email, and 6+ char Password!'),
+                                ),
+                              );
+                              return;
+                            }
 
-                // Switch between Login and Register
-                TextButton(
-                  onPressed: () => setState(() => _isLoginMode = !_isLoginMode),
-                  child: Text(
-                    _isLoginMode ? "Don't have an account? Sign Up" : "Already have an account? Sign In",
-                    style: const TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.w600),
+                            setState(() {
+                              _isLoading = true;
+                            });
+
+                            try {
+                              UserCredential userCredential;
+                              try {
+                                userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                                  email: _emailController.text.trim(),
+                                  password: _passwordController.text.trim(),
+                                );
+                              } catch (e) {
+                                userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+                                  email: _emailController.text.trim(),
+                                  password: _passwordController.text.trim(),
+                                );
+                              }
+
+                              String uid = userCredential.user!.uid;
+
+                              if (_isClientRole) {
+                                // Save client profile if needed
+                                await FirebaseFirestore.instance.collection('clients').doc(uid).set({
+                                  'name': _nameController.text.trim(),
+                                  'phone': _phoneController.text.trim(),
+                                  'email': _emailController.text.trim(),
+                                  'updatedAt': FieldValue.serverTimestamp(),
+                                }, SetOptions(merge: true));
+
+                                if (mounted) {
+                                  // Clients go straight to Post Lead or Home
+                                  Navigator.pushReplacementNamed(context, '/home');
+                                }
+                              } else {
+                                // Save contractor profile
+                                await FirebaseFirestore.instance.collection('contractors').doc(uid).set({
+                                  'name': _nameController.text.trim(),
+                                  'phone': _phoneController.text.trim(),
+                                  'email': _emailController.text.trim(),
+                                  'firmName': _firmController.text.trim().isEmpty ? 'Independent' : _firmController.text.trim(),
+                                  'updatedAt': FieldValue.serverTimestamp(),
+                                }, SetOptions(merge: true));
+
+                                ContractorModel.name = _nameController.text.trim();
+                                ContractorModel.phone = _phoneController.text.trim();
+                                ContractorModel.email = _emailController.text.trim();
+                                ContractorModel.firmName = _firmController.text.trim().isEmpty ? 'Independent' : _firmController.text.trim();
+
+                                if (mounted) {
+                                  Navigator.pushReplacementNamed(context, '/home');
+                                }
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Auth Error: ${e.toString()}ger')),
+                                );
+                              }
+                            } finally {
+                              if (mounted) {
+                                setState(() {
+                                  _isLoading = false;
+                                });
+                              }
+                            }
+                          },
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Color(0xFF0F172A))
+                        : Text(
+                            _isClientRole ? 'Continue as Client' : 'Continue to Marketplace',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                          ),
                   ),
                 ),
               ],
