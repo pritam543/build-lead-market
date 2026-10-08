@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart'; // Firebase Core import kiya gaya hai
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/post_lead_screen.dart';
@@ -9,7 +10,22 @@ import 'screens/profile_screen.dart';
 import 'screens/support_screen.dart';
 import 'screens/admin_records_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Firebase initialization with project configuration keys
+  await Firebase.initializeApp(
+    options: const FirebaseOptions(
+      apiKey: "AIzaSyCj5ecFqw0yLiBY3Qf54jcfZPbEAK2u7GI",
+      appId: "1:512564352355:web:03e3991ea198ce1dc0ef56",
+      messagingSenderId: "512564352355",
+      projectId: "build-lead-market",
+      authDomain: "build-lead-market.firebaseapp.com",
+      storageBucket: "build-lead-market.appspot.com",
+      measurementId: "G-T9JSM35Q2B",
+    ),
+  );
+
   runApp(const BuildLeadApp());
 }
 
