@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/lead_model.dart';
 
 class PostLeadScreen extends StatefulWidget {
@@ -19,6 +20,7 @@ class _PostLeadScreenState extends State<PostLeadScreen> {
   final TextEditingController _feeController = TextEditingController(text: '₹500');
 
   String _category = 'Residential';
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -139,37 +141,87 @@ class _PostLeadScreenState extends State<PostLeadScreen> {
             height: 50,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B)),
-              onPressed: () {
-                if (_titleController.text.trim().isEmpty || _clientNameController.text.trim().isEmpty || _clientPhoneController.text.trim().isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill Client Name, Phone, and Project Title!')),
-                  );
-                  return;
-                }
+              onPressed: _isLoading
+                  ? null
+                  : () async {
+                      if (_titleController.text.trim().isEmpty ||
+                          _clientNameController.text.trim().isEmpty ||
+                          _clientPhoneController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please fill Client Name, Phone, and Project Title!')),
+                        );
+                        return;
+                      }
 
-                // Add posted lead to global marketplace storage
-                GlobalData.allLeads.insert(
-                  0,
-                  LeadModel(
-                    title: _titleController.text.trim(),
-                    location: _locationController.text.trim().isEmpty ? 'Indore, MP' : _locationController.text.trim(),
-                    specs: _specsController.text.trim().isEmpty ? 'Standard' : _specsController.text.trim(),
-                    budget: _budgetController.text.trim().isEmpty ? 'Open Budget' : _budgetController.text.trim(),
-                    category: _category,
-                    fee: _feeController.text.trim().isEmpty ? '₹500' : _feeController.text.trim(),
-                    clientName: _clientNameController.text.trim(),
-                    clientPhone: _clientPhoneController.text.trim(),
-                    clientEmail: _clientEmailController.text.trim().isEmpty ? 'N/A' : _clientEmailController.text.trim(),
-                    timeAgo: 'Just now',
-                  ),
-                );
+                      setState(() {
+                        _isLoading = true;
+                      });
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Lead posted successfully to Marketplace!')),
-                );
-                Navigator.pop(context);
-              },
-              child: const Text('Publish Lead to Marketplace', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                      try {
+                        String title = _titleController.text.trim();
+                        String location = _locationController.text.trim().isEmpty ? 'Indore, MP' : _locationController.text.trim();
+                        String specs = _specsController.text.trim().isEmpty ? 'Standard' : _specsController.text.trim();
+                        String budget = _budgetController.text.trim().isEmpty ? 'Open Budget' : _budgetController.text.trim();
+                        String fee = _feeController.text.trim().isEmpty ? '₹500' : _feeController.text.trim();
+                        String clientName = _clientNameController.text.trim();
+                        String clientPhone = _clientPhoneController.text.trim();
+                        String clientEmail = _clientEmailController.text.trim().isEmpty ? 'N/A' : _clientEmailController.text.trim();
+
+                        // 1. Save lead to Cloud Firestore Database
+                        await FirebaseFirestore.instance.collection('leads').add({
+                          'title': title,
+                          'location': location,
+                          'specs': specs,
+                          'budget': budget,
+                          'category': _category,
+                          'fee': fee,
+                          'clientName': clientName,
+                          'clientPhone': clientPhone,
+                          'clientEmail': clientEmail,
+                          'timeAgo': 'Just now',
+                          'createdAt': FieldValue.serverTimestamp(),
+                        });
+
+                        // 2. Add posted lead to local global storage list
+                        GlobalData.allLeads.insert(
+                          0,
+                          LeadModel(
+                            title: title,
+                            location: location,
+                            specs: specs,
+                            budget: budget,
+                            category: _category,
+                            fee: fee,
+                            clientName: clientName,
+                            clientPhone: clientPhone,
+                            clientEmail: clientEmail,
+                            timeAgo: 'Just now',
+                          ),
+                        );
+
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Lead posted successfully to Cloud Marketplace!')),
+                          );
+                          Navigator.pop(context);
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error posting lead: ${e.toString()}ger')),
+                          );
+                        }
+                      } finally {
+                        if (mounted) {
+                          setState(() {
+                            _isLoading = false;
+                          });
+                        }
+                      }
+                    },
+              child: _isLoading
+                  ? const CircularProgressIndicator(color: Color(0xFF0F172A))
+                  : const Text('Publish Lead to Marketplace', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
             ),
           ),
         ],
