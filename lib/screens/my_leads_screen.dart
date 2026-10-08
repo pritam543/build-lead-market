@@ -73,6 +73,36 @@ class MyLeadsScreen extends StatelessWidget {
                           Text(lead.location, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                         ],
                       ),
+                      const SizedBox(height: 10),
+                      
+                      // Project Area and Budget Box
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.square_foot, size: 15, color: Colors.blueGrey),
+                                const SizedBox(width: 6),
+                                Text('Area: ${lead.specs}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87)),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                const Icon(Icons.account_balance_wallet, size: 15, color: Colors.green),
+                                const SizedBox(width: 6),
+                                Text('Budget: ${lead.budget}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
                       const Divider(height: 20),
                       Text('Client Name: ${lead.clientName}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                       const SizedBox(height: 4),

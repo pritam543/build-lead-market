@@ -108,13 +108,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 List<LeadModel> allCloudLeads = snapshot.data!.docs.map((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   return LeadModel(
-                    title: data['title'] ?? '',
-                    location: data['location'] ?? '',
-                    specs: data['specs'] ?? '',
-                    budget: data['budget'] ?? '',
+                    title: data['title'] ?? 'Construction Project',
+                    location: data['location'] ?? 'Indore',
+                    specs: data['specs'] ?? 'Not Specified',
+                    budget: data['budget'] ?? 'Negotiable',
                     category: data['category'] ?? 'Residential',
                     fee: data['fee'] ?? '₹500',
-                    clientName: data['clientName'] ?? '',
+                    clientName: data['clientName'] ?? 'Verified Client',
                     clientPhone: data['clientPhone'] ?? '',
                     clientEmail: data['clientEmail'] ?? '',
                     timeAgo: data['timeAgo'] ?? 'Just now',
@@ -165,31 +165,51 @@ class _HomeScreenState extends State<HomeScreen> {
                             lead.title,
                             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 8),
+                          
+                          // Highlighted Client & Location Row
                           Row(
                             children: [
-                              const Icon(Icons.person_outline, size: 14, color: Colors.blueGrey),
-                              const SizedBox(width: 4),
+                              const Icon(Icons.person, size: 15, color: Color(0xFFF59E0B)),
+                              const SizedBox(width: 6),
                               Text('Client: ${lead.clientName}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.black87)),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              const Icon(Icons.location_on_outlined, size: 14, color: Colors.redAccent),
+                              const Spacer(),
+                              const Icon(Icons.location_on, size: 15, color: Colors.redAccent),
                               const SizedBox(width: 4),
-                              Text(lead.location, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                              Text(lead.location, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey)),
                             ],
                           ),
                           const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Text('📐 Area: ${lead.specs}', style: const TextStyle(fontSize: 12, color: Colors.black87)),
-                              const SizedBox(width: 16),
-                              Text('💰 Budget: ${lead.budget}', style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold)),
-                            ],
+
+                          // Area and Budget Highlight Container
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.square_foot, size: 16, color: Colors.blueGrey),
+                                    const SizedBox(width: 6),
+                                    Text('Area: ${lead.specs}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black87)),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.account_balance_wallet, size: 16, color: Colors.green),
+                                    const SizedBox(width: 6),
+                                    Text('Budget: ${lead.budget}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green)),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 10),
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
@@ -269,7 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFF59E0B) : Colors.white.withOpacity(0.1),
+          color: isSelected ? const Color(0xFFF50E0B) : Colors.white.withOpacity(0.1),
           borderRadius: BorderRadius.circular(18),
         ),
         child: Text(label, style: TextStyle(color: isSelected ? const Color(0xFF0F172A) : Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
