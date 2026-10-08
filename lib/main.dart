@@ -16,7 +16,7 @@ void main() async {
   // Firebase initialization with project configuration keys
   await Firebase.initializeApp(
     options: const FirebaseOptions(
-      apiKey: "AIzaSyCj5ecFqw0yLiBY3Qf54jcfZPbEAK2u7GI",
+      apiKey: "AIzaSyBs_mtvwp_1Rz2od42z_HQUkNiTHcGuEa0",
       appId: "1:512564352355:web:03e3991ea198ce1dc0ef56",
       messagingSenderId: "512564352355",
       projectId: "build-lead-market",
