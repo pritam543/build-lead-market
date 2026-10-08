@@ -49,9 +49,11 @@ class MyLeadsScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            lead.title,
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                          Expanded(
+                            child: Text(
+                              lead.title,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                            ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -59,18 +61,24 @@ class MyLeadsScreen extends StatelessWidget {
                               color: Colors.green.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: const Text('Unlocked (Exclusive)', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
+                            child: const Text('Unlocked', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
                           ),
                         ],
                       ),
                       const SizedBox(height: 6),
-                      Text('📍 ', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on, size: 14, color: Colors.redAccent),
+                          const SizedBox(width: 4),
+                          Text(lead.location, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
                       const Divider(height: 20),
-                      Text('Client Name: ', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                      Text('Client Name: ${lead.clientName}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                       const SizedBox(height: 4),
-                      Text('📞 ', style: const TextStyle(fontSize: 13, color: Colors.blue, fontWeight: FontWeight.bold)),
+                      Text('📞 Phone: ${lead.clientPhone}', style: const TextStyle(fontSize: 13, color: Colors.blue, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
-                      Text('✉️ ', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text('✉️ Email: ${lead.clientEmail}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                       const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
@@ -82,7 +90,7 @@ class MyLeadsScreen extends StatelessWidget {
                           ),
                           onPressed: () {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Calling client: ')),
+                              SnackBar(content: Text('Calling client: ${lead.clientPhone}')),
                             );
                           },
                           child: const Text('Call Client Now', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
