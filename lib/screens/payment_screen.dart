@@ -1,5 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/lead_model.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -11,6 +13,7 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   final TextEditingController _utrController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -36,9 +39,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Project Lead: ', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                Text('Project Lead: ${lead.title}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
                 const SizedBox(height: 6),
-                Text('📍 ', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text('📍 ${lead.location}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 const Divider(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -63,7 +66,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               children: [
                 const Text('Step 1: Pay via UPI App', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
                 const SizedBox(height: 6),
-                Text('Transfer  securely using GPay, PhonePe, or Paytm.', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text('Transfer ${lead.fee} securely using GPay, PhonePe, or Paytm.', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 const SizedBox(height: 14),
                 SizedBox(
                   width: double.infinity,
@@ -72,10 +75,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B)),
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('UPI App launched for payment of .')),
+                        SnackBar(content: Text('UPI App launched for payment of ${lead.fee}.')),
                       );
                     },
-                    child: Text('Pay  via UPI', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                    child: Text('Pay ${lead.fee} via UPI', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                   ),
                 ),
               ],
@@ -116,37 +119,80 @@ class _PaymentScreenState extends State<PaymentScreen> {
                   height: 48,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                    onPressed: () {
-                      if (_utrController.text.trim().length != 12) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter a valid 12-digit UTR number!')),
-                        );
-                        return;
-                      }
+                    onPressed: _isLoading
+                        ? null
+                        : () async {
+                            if (_utrController.text.trim().length != 12) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Please enter a valid 12-digit UTR number!')),
+                              );
+                              return;
+                            }
 
-                      lead.isUnlocked = true;
-                      GlobalData.unlockedLeads.add(lead);
-                      GlobalData.allLeads.remove(lead);
+                            setState(() {
+                              _isLoading = true;
+                            });
 
-                      // Save complete purchase log to Admin Database
-                      GlobalData.allPurchases.add(
-                        PurchaseRecord(
-                          leadTitle: lead.title,
-                          clientName: lead.clientName,
-                          clientPhone: lead.clientPhone,
-                          contractorName: ContractorModel.name.isEmpty ? 'Pritam Carpenter' : ContractorModel.name,
-                          contractorPhone: ContractorModel.phone.isEmpty ? '9876543210' : ContractorModel.phone,
-                          contractorEmail: ContractorModel.email.isEmpty ? 'pritam@aviotech.com' : ContractorModel.email,
-                          contractorFirm: ContractorModel.firmName.isEmpty ? 'Aviora Technologies' : ContractorModel.firmName,
-                          amountPaid: lead.fee,
-                          utrNumber: _utrController.text.trim(),
-                          purchaseTime: 'Just now',
-                        ),
-                      );
+                            try {
+                              User? currentUser = FirebaseAuth.instance.currentUser;
+                              String contractorUid = currentUser?.uid ?? 'unknown_uid';
+                              String cName = ContractorModel.name.isEmpty ? 'Verified Contractor' : ContractorModel.name;
+                              String cPhone = ContractorModel.phone.isEmpty ? 'N/A' : ContractorModel.phone;
+                              String cEmail = ContractorModel.email.isEmpty ? (currentUser?.email ?? 'N/A') : ContractorModel.email;
+                              String cFirm = ContractorModel.firmName.isEmpty ? 'Independent' : ContractorModel.firmName;
 
-                      Navigator.pushReplacementNamed(context, '/success', arguments: lead);
-                    },
-                    child: const Text('Verify UTR & Unlock Lead', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                              // 1. Save purchase record to Firestore 'purchases' collection for Admin Panel
+                              await FirebaseFirestore.instance.collection('purchases').add({
+                                'leadTitle': lead.title,
+                                'clientName': lead.clientName,
+                                'clientPhone': lead.clientPhone,
+                                'contractorUid': contractorUid,
+                                'contractorName': cName,
+                                'contractorPhone': cPhone,
+                                'contractorEmail': cEmail,
+                                'contractorFirm': cFirm,
+                                'amountPaid': lead.fee,
+                                'utrNumber': _utrController.text.trim(),
+                                'purchaseTime': 'Just now',
+                                'createdAt': FieldValue.serverTimestamp(),
+                              });
+
+                              // 2. Remove lead from Firestore 'leads' collection to maintain Exclusivity
+                              final leadQuery = await FirebaseFirestore.instance
+                                  .collection('leads')
+                                  .where('title', isEqualTo: lead.title)
+                                  .where('clientPhone', isEqualTo: lead.clientPhone)
+                                  .get();
+
+                              for (var doc in leadQuery.docs) {
+                                await doc.reference.delete();
+                              }
+
+                              // 3. Update local lists
+                              lead.isUnlocked = true;
+                              GlobalData.unlockedLeads.add(lead);
+                              GlobalData.allLeads.remove(lead);
+
+                              if (mounted) {
+                                Navigator.pushReplacementNamed(context, '/success', arguments: lead);
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error unlocking lead: ${e.toString()}ger')),
+                                );
+                              }
+                            } finally {
+                              if (mounted) {
+                                setState(() {
+                                  _isLoading = false;
+                                });
+                              }
+                            }
+                          },
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text('Verify UTR & Unlock Lead', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
                 ),
               ],
