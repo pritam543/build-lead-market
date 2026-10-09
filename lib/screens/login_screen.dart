@@ -22,7 +22,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   int _logoTapCount = 0;
 
-  // Secret Admin Dialog trigger on triple tap of logo
   void _handleLogoTap() {
     _logoTapCount++;
     if (_logoTapCount >= 3) {
@@ -110,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 20),
                 
-                // Role Selector Toggle (Client vs Contractor)
+                // Role Selector Toggle
                 Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
@@ -252,16 +251,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             try {
                               UserCredential userCredential;
                               String email = _emailController.text.trim();
-                              // Fixed secure default password so users never face credential errors
                               String defaultPassword = "BuildLeadPassword123!";
 
                               try {
-                                userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                                // Pehle login karke dekhein agar account pehle se hai
+                                userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
                                   email: email,
                                   password: defaultPassword,
                                 );
                               } catch (_) {
-                                userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+                                // Agar login fail ho matlab account nahi hai, toh naya bana lein
+                                userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
                                   email: email,
                                   password: defaultPassword,
                                 );
