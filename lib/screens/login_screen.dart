@@ -57,7 +57,8 @@ class _LoginScreenState extends State<LoginScreen> {
               if (_adminPassController.text.trim() == 'admin123') {
                 _adminPassController.clear();
                 Navigator.pop(context);
-                Navigator.pushNamed(context, '/admin_records');
+                // Admin pin dalne par ab seedha poore app ke home par jayega taaki poora app chal sake
+                Navigator.pushReplacementNamed(context, '/home');
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Incorrect Admin Passcode!')),
@@ -254,13 +255,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               String defaultPassword = "BuildLeadPassword123!";
 
                               try {
-                                // Pehle login karke dekhein agar account pehle se hai
                                 userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
                                   email: email,
                                   password: defaultPassword,
                                 );
                               } catch (_) {
-                                // Agar login fail ho matlab account nahi hai, toh naya bana lein
                                 userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
                                   email: email,
                                   password: defaultPassword,
