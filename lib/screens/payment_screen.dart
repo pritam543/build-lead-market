@@ -1,6 +1,6 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -13,174 +13,178 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   final TextEditingController _utrController = TextEditingController();
   bool _isLoading = false;
+  Map<String, dynamic>? leadData;
+
+  // Yahan apni asli UPI ID daalein aur merchant name BuildLead Market rahega
+  final String merchantUpiId = '89640609281@ybl'; 
+  final String merchantName = 'BuildLead Market';
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args != null && args is Map<String, dynamic>) {
+      leadData = args;
+    }
+  }
+
+  // UPI Intent / Deep Link Launch karne ka function
+  Future<void> _launchUpiPayment() async {
+    final String upiUrl = 'upi://pay?pa=$merchantUpiId&pn=${Uri.encodeComponent(merchantName)}&am=500.00&cu=INR&tn=LeadUnlock_${leadData?['id'] ?? 'fee'}';
+    
+    final Uri uri = Uri.parse(upiUrl);
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not open UPI app automatically. Please pay via QR/UPI manually.')),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error launching UPI: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final Map<String, dynamic> lead = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    String projectName = leadData?['project_name'] ?? 'Construction Project';
+    String location = leadData?['location'] ?? 'Indore';
+    int leadId = leadData?['id'] ?? 0;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Secure Lead Unlock & UPI Payment', style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: const Text('Unlock Lead & Secure Payment', style: TextStyle(color: Colors.white, fontSize: 16)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 450),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 3))],
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Project: ${lead['project_name'] ?? 'Construction Project'}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
-                const SizedBox(height: 6),
-                Text('📍 ${lead['location'] ?? 'Indore'}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                const Divider(height: 20),
                 const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Unlock Fee:', style: TextStyle(fontSize: 14, color: Colors.black54)),
-                    Text('₹500', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
+                    Icon(Icons.lock_open, color: Color(0xFFF59E0B), size: 28),
+                    SizedBox(width: 12),
+                    Text('Lead Unlock Gateway', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
                   ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E293B).withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF1E293B).withOpacity(0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Step 1: Pay via UPI App', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
-                const SizedBox(height: 6),
-                const Text('Transfer ₹500 securely using GPay, PhonePe, or Paytm.', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                const SizedBox(height: 14),
+                const Divider(height: 24),
+                Text('Project: $projectName', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black87)),
+                const SizedBox(height: 4),
+                Text('Location: $location', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(color: Colors.amber.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Unlock Fee:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      Text('₹500.00', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Step 1: Pay via UPI Intent Button
                 SizedBox(
                   width: double.infinity,
                   height: 48,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B)),
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('UPI App launched for payment of ₹500.')),
-                      );
-                    },
-                    child: const Text('Pay ₹500 via UPI', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB)),
+                    onPressed: _launchUpiPayment,
+                    icon: const Icon(Icons.payment, color: Colors.white),
+                    label: const Text('Pay ₹500 via UPI (GPay/PhonePe/Paytm)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 3))],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Step 2: Enter 12-Digit UTR Number', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
-                const SizedBox(height: 6),
-                const Text('Enter exact 12-digit UTR reference ID below to verify.', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                const SizedBox(height: 14),
+                const SizedBox(height: 20),
+                const Text('Step 2: Enter 12-Digit UTR Number After Payment', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                const SizedBox(height: 8),
                 TextField(
                   controller: _utrController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(12),
-                  ],
-                  decoration: InputDecoration(
-                    labelText: '12-Digit UTR Number',
-                    hintText: 'Enter 12 digits',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    prefixIcon: const Icon(Icons.receipt_long, color: Color(0xFF1E293B)),
+                  decoration: const InputDecoration(
+                    labelText: 'Enter UTR / Transaction Reference ID',
+                    border: OutlineInputBorder(),
+                    hintText: 'e.g., 432156789012',
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
+
+                // Step 3: Submit & Verify Button
                 SizedBox(
                   width: double.infinity,
-                  height: 48,
+                  height: 50,
                   child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-                    onPressed: _isLoading
-                        ? null
-                        : () async {
-                            if (_utrController.text.trim().length != 12) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Please enter a valid 12-digit UTR number!')),
-                              );
-                              return;
-                            }
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981)),
+                    onPressed: _isLoading ? null : () async {
+                      if (_utrController.text.trim().length < 8) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please enter a valid UTR transaction number!')),
+                        );
+                        return;
+                      }
 
-                            setState(() => _isLoading = true);
+                      setState(() => _isLoading = true);
 
-                            try {
-                              final prefs = await SharedPreferences.getInstance();
-                              String contractorUid = prefs.getString('user_uid') ?? 'unknown_uid';
-                              String cName = prefs.getString('user_name') ?? 'Contractor';
-                              String cPhone = prefs.getString('user_phone') ?? 'N/A';
+                      try {
+                        final prefs = await SharedPreferences.getInstance();
+                        String contractorUid = prefs.getString('user_uid') ?? '';
+                        String contractorName = prefs.getString('user_name') ?? 'Contractor';
+                        String contractorPhone = prefs.getString('user_phone') ?? 'N/A';
 
-                              int leadId = lead['id'];
-                              String utr = _utrController.text.trim();
+                        // Save purchase to MySQL Database permanently
+                        bool success = await ApiService.purchaseLead(
+                          leadId: leadId,
+                          contractorUid: contractorUid,
+                          contractorName: contractorName,
+                          contractorPhone: contractorPhone,
+                          utrNumber: _utrController.text.trim(),
+                          amountPaid: '₹500',
+                        );
 
-                              bool success = await ApiService.purchaseLead(
-                                leadId: leadId,
-                                contractorUid: contractorUid,
-                                contractorName: cName,
-                                contractorPhone: cPhone,
-                                utrNumber: utr,
-                                amountPaid: '₹500',
-                              );
-
-                              if (success) {
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Lead Unlocked Successfully!')),
-                                  );
-                                  Navigator.pop(context);
-                                }
-                              } else {
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Purchase failed. Please check UTR or connection.')),
-                                  );
-                                }
-                              }
-                            } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error: ${e.toString()}')),
-                                );
-                              }
-                            } finally {
-                              if (mounted) setState(() => _isLoading = false);
-                            }
-                          },
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text('Verify UTR & Unlock Lead', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+                        if (success) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Payment Verified & Lead Unlocked Successfully! 🎉')),
+                            );
+                            Navigator.pushReplacementNamed(context, '/my_leads');
+                          }
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Failed to save purchase. Try again.')),
+                            );
+                          }
+                        }
+                      } catch (e) {
+                        print('Payment submission error: $e');
+                      } finally {
+                        if (mounted) setState(() => _isLoading = false);
+                      }
+                    },
+                    child: _isLoading 
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('Submit & Unlock Lead Details', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                   ),
                 ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
