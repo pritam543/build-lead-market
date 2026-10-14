@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 class LeadModel {
+  final int id;
   final String title;
   final String location;
   final String specs;
@@ -15,6 +16,7 @@ class LeadModel {
   bool isUnlocked;
 
   LeadModel({
+    required this.id,
     required this.title,
     required this.location,
     required this.specs,
@@ -27,6 +29,23 @@ class LeadModel {
     required this.timeAgo,
     this.isUnlocked = false,
   });
+
+  factory LeadModel.fromJson(Map<String, dynamic> json) {
+    return LeadModel(
+      id: json['id'] ?? 0,
+      title: json['project_name'] ?? 'Construction Project',
+      location: json['location'] ?? 'Indore',
+      specs: json['area'] ?? 'N/A',
+      budget: json['budget'] ?? 'N/A',
+      category: json['category'] ?? 'Residential',
+      fee: '₹500',
+      clientName: json['client_name'] ?? 'Verified Client',
+      clientPhone: json['phone'] ?? json['client_phone'] ?? 'Hidden',
+      clientEmail: json['email'] ?? json['client_email'] ?? 'Hidden',
+      timeAgo: json['created_at'] != null ? json['created_at'].toString().substring(0, 10) : 'Just now',
+      isUnlocked: false,
+    );
+  }
 }
 
 class RegisteredContractor {
@@ -81,31 +100,29 @@ class PurchaseRecord {
 
 class BackendRepository {
   static final Random _random = Random();
-  static final List<String> _firstNames = ['Ramesh', 'Suresh', 'Mahesh', 'Rajesh', 'Vikram', 'Anil', 'Sunil', 'Pankaj', 'Deepak', 'Manish', 'Alok', 'Sanjay', 'Kishore', 'Vinod', 'Manoj'];
-  static final List<String> _lastNames = ['Patel', 'Agrawal', 'Goyal', 'Joshi', 'Rathore', 'Verma', 'Sharma', 'Gupta', 'Soni', 'Trivedi', 'Mehta', 'Mishra', 'Dubey', 'Chouhan', 'Yadav'];
   static final List<String> _locations = ['Vijay Nagar, Indore', 'Palasia, Indore', 'AB Road, Indore', 'South Tukoganj, Indore', 'Bhawarkua, Indore', 'Super Corridor, Indore', 'Scheme No 54, Indore', 'Rau, Indore'];
   static final List<String> _projectTypes = ['3BHK Independent House Construction', 'Commercial Office Interior Setup', 'Duplex Villa Finishing & Flooring', 'Luxury Apartment Renovation', 'Retail Showroom Civil Work', 'Warehouse Flooring & Shed Fabrication', '4BHK Modern Bungalow Structure', 'Restaurant Kitchen & Dining Interior'];
 
-  static String getRandomClientName() => '';
-  static String getRandomPhone() => '+91 ';
+  static String getRandomClientName() => 'Verified Client';
+  static String getRandomPhone() => '+91 9876543210';
   static String getRandomLocation() => _locations[_random.nextInt(_locations.length)];
 
   static List<LeadModel> getInitialBackendLeads() {
     return List.generate(5, (index) {
-      String client = getRandomClientName();
       String proj = _projectTypes[_random.nextInt(_projectTypes.length)];
       String cat = (proj.contains('Commercial') || proj.contains('Showroom') || proj.contains('Warehouse') || proj.contains('Restaurant')) ? 'Commercial' : (proj.contains('Renovation') ? 'Renovation' : 'Residential');
       return LeadModel(
+        id: index + 1,
         title: proj,
         location: getRandomLocation(),
-        specs: ' Sq. Ft.',
-        budget: '₹L - ₹L',
+        specs: '1500 Sq. Ft.',
+        budget: '₹25L - ₹30L',
         category: cat,
-        fee: _random.nextBool() ? '₹500' : '₹750',
-        clientName: client,
+        fee: '₹500',
+        clientName: getRandomClientName(),
         clientPhone: getRandomPhone(),
-        clientEmail: '@gmail.com',
-        timeAgo: 'h ago',
+        clientEmail: 'client@gmail.com',
+        timeAgo: '2h ago',
       );
     });
   }

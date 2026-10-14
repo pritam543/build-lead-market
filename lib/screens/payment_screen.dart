@@ -1,8 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/lead_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart';
 
 class PaymentScreen extends StatefulWidget {
   const PaymentScreen({Key? key}) : super(key: key);
@@ -17,7 +16,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final LeadModel lead = ModalRoute.of(context)!.settings.arguments as LeadModel;
+    final Map<String, dynamic> lead = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -39,15 +38,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Project Lead: ${lead.title}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                Text('Project: ${lead['project_name'] ?? 'Construction Project'}', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
                 const SizedBox(height: 6),
-                Text('📍 ${lead.location}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text('📍 ${lead['location'] ?? 'Indore'}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 const Divider(height: 20),
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Unlock Fee:', style: TextStyle(fontSize: 14, color: Colors.black54)),
-                    Text(lead.fee, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
+                    Text('Unlock Fee:', style: TextStyle(fontSize: 14, color: Colors.black54)),
+                    Text('₹500', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.green)),
                   ],
                 ),
               ],
@@ -66,7 +65,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
               children: [
                 const Text('Step 1: Pay via UPI App', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B))),
                 const SizedBox(height: 6),
-                Text('Transfer ${lead.fee} securely using GPay, PhonePe, or Paytm.', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                const Text('Transfer ₹500 securely using GPay, PhonePe, or Paytm.', style: TextStyle(fontSize: 12, color: Colors.grey)),
                 const SizedBox(height: 14),
                 SizedBox(
                   width: double.infinity,
@@ -75,10 +74,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF59E0B)),
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('UPI App launched for payment of ${lead.fee}.')),
+                        const SnackBar(content: Text('UPI App launched for payment of ₹500.')),
                       );
                     },
-                    child: Text('Pay ${lead.fee} via UPI', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                    child: const Text('Pay ₹500 via UPI', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
                   ),
                 ),
               ],
@@ -129,65 +128,48 @@ class _PaymentScreenState extends State<PaymentScreen> {
                               return;
                             }
 
-                            setState(() {
-                              _isLoading = true;
-                            });
+                            setState(() => _isLoading = true);
 
                             try {
-                              User? currentUser = FirebaseAuth.instance.currentUser;
-                              String contractorUid = currentUser?.uid ?? 'unknown_uid';
-                              String cName = ContractorModel.name.isEmpty ? 'Verified Contractor' : ContractorModel.name;
-                              String cPhone = ContractorModel.phone.isEmpty ? 'N/A' : ContractorModel.phone;
-                              String cEmail = ContractorModel.email.isEmpty ? (currentUser?.email ?? 'N/A') : ContractorModel.email;
-                              String cFirm = ContractorModel.firmName.isEmpty ? 'Independent' : ContractorModel.firmName;
+                              final prefs = await SharedPreferences.getInstance();
+                              String contractorUid = prefs.getString('user_uid') ?? 'unknown_uid';
+                              String cName = prefs.getString('user_name') ?? 'Contractor';
+                              String cPhone = prefs.getString('user_phone') ?? 'N/A';
 
-                              // 1. Save purchase record to Firestore 'purchases' collection for Admin Panel
-                              await FirebaseFirestore.instance.collection('purchases').add({
-                                'leadTitle': lead.title,
-                                'clientName': lead.clientName,
-                                'clientPhone': lead.clientPhone,
-                                'contractorUid': contractorUid,
-                                'contractorName': cName,
-                                'contractorPhone': cPhone,
-                                'contractorEmail': cEmail,
-                                'contractorFirm': cFirm,
-                                'amountPaid': lead.fee,
-                                'utrNumber': _utrController.text.trim(),
-                                'purchaseTime': 'Just now',
-                                'createdAt': FieldValue.serverTimestamp(),
-                              });
+                              int leadId = lead['id'];
+                              String utr = _utrController.text.trim();
 
-                              // 2. Remove lead from Firestore 'leads' collection to maintain Exclusivity
-                              final leadQuery = await FirebaseFirestore.instance
-                                  .collection('leads')
-                                  .where('title', isEqualTo: lead.title)
-                                  .where('clientPhone', isEqualTo: lead.clientPhone)
-                                  .get();
+                              bool success = await ApiService.purchaseLead(
+                                leadId: leadId,
+                                contractorUid: contractorUid,
+                                contractorName: cName,
+                                contractorPhone: cPhone,
+                                utrNumber: utr,
+                                amountPaid: '₹500',
+                              );
 
-                              for (var doc in leadQuery.docs) {
-                                await doc.reference.delete();
-                              }
-
-                              // 3. Update local lists
-                              lead.isUnlocked = true;
-                              GlobalData.unlockedLeads.add(lead);
-                              GlobalData.allLeads.remove(lead);
-
-                              if (mounted) {
-                                Navigator.pushReplacementNamed(context, '/success', arguments: lead);
+                              if (success) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Lead Unlocked Successfully!')),
+                                  );
+                                  Navigator.pop(context);
+                                }
+                              } else {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Purchase failed. Please check UTR or connection.')),
+                                  );
+                                }
                               }
                             } catch (e) {
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error unlocking lead: ${e.toString()}ger')),
+                                  SnackBar(content: Text('Error: ${e.toString()}')),
                                 );
                               }
                             } finally {
-                              if (mounted) {
-                                setState(() {
-                                  _isLoading = false;
-                                });
-                              }
+                              if (mounted) setState(() => _isLoading = false);
                             }
                           },
                     child: _isLoading
