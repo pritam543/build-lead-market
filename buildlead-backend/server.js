@@ -6,21 +6,27 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// MySQL Connection (Cloud & Local Compatible)
-const db = mysql.createConnection({
+// MySQL Connection Pool (Optimized for TiDB Cloud & Render)
+const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'buildlead_market',
-    port: process.env.DB_PORT || 3306
+    port: process.env.DB_PORT || 4000,
+    ssl: process.env.DB_HOST?.includes('tidb') ? { rejectUnauthorized: true } : null,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
 });
 
-db.connect((err) => {
+// Test Database Connection
+db.getConnection((err, connection) => {
     if (err) {
         console.error('Database connection failed:', err);
         return;
     }
-    console.log('MySQL Connected Successfully!');
+    console.log('MySQL / TiDB Connected Successfully!');
+    connection.release();
 });
 
 // 1. Signup / Login API (Persistent User Save)
