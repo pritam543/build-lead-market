@@ -48,7 +48,42 @@ class ApiService {
     return [];
   }
 
-  // 3. Purchase Lead (Save UTR & Unlock Contact Details)
+  // 3. Post New Lead (Client Project)
+  static Future<bool> postLead({
+    required String clientName,
+    required String projectName,
+    required String area,
+    required String location,
+    required String budget,
+    required String category,
+    required String phone,
+    required String email,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/leads'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'client_name': clientName,
+          'project_name': projectName,
+          'area': area,
+          'location': location,
+          'budget': budget,
+          'category': category,
+          'phone': phone,
+          'email': email,
+        }),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      }
+    } catch (e) {
+      print('Error posting lead: $e');
+    }
+    return false;
+  }
+
+  // 4. Purchase Lead (Save UTR & Unlock Contact Details)
   static Future<bool> purchaseLead({
     required int leadId,
     required String contractorUid,
@@ -79,7 +114,7 @@ class ApiService {
     return false;
   }
 
-  // 4. Get Unlocked Leads for Contractor
+  // 5. Get Unlocked Leads for Contractor
   static Future<List<dynamic>> getUnlockedLeads(String uid) async {
     try {
       final response = await http.get(Uri.parse('$baseUrl/unlocked-leads?uid=$uid'));
