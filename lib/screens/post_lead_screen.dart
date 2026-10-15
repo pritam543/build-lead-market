@@ -95,7 +95,7 @@ class _PostLeadScreenState extends State<PostLeadScreen> {
 
                 try {
                   final response = await http.post(
-                    Uri.parse('http://localhost:3000/api/leads'),
+                    Uri.parse('https://build-lead-market.onrender.com/api/leads'),
                     headers: {'Content-Type': 'application/json'},
                     body: jsonEncode({
                       'project_name': _titleController.text.trim(),
