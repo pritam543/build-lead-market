@@ -32,7 +32,7 @@ class _AdminRecordsScreenState extends State<AdminRecordsScreen> {
 
   Future<List<dynamic>> _fetchData(String endpoint) async {
     try {
-      final response = await http.get(Uri.parse('https://build-lead-market.onrender.com/api/$endpoint'));
+    final response = await http.get(Uri.parse('https://build-lead-market.onrender.com/api/$endpoint'));
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
