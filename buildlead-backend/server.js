@@ -6,12 +6,13 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// MySQL Connection
+// MySQL Connection (Cloud & Local Compatible)
 const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'buildlead_market'
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'buildlead_market',
+    port: process.env.DB_PORT || 3306
 });
 
 db.connect((err) => {
@@ -19,7 +20,7 @@ db.connect((err) => {
         console.error('Database connection failed:', err);
         return;
     }
-    console.log('MySQL Connected Successfully to buildlead_market!');
+    console.log('MySQL Connected Successfully!');
 });
 
 // 1. Signup / Login API (Persistent User Save)
@@ -83,7 +84,7 @@ app.get('/api/unlocked-leads', (req, res) => {
     });
 });
 
-// 6. Admin Master Data APIs (Full Data Sheets with Counters)
+// 6. Admin Master Data APIs
 app.get('/api/admin/leads', (req, res) => {
     db.query('SELECT * FROM leads ORDER BY id DESC', (err, results) => res.json(results));
 });
@@ -97,6 +98,7 @@ app.get('/api/admin/purchases', (req, res) => {
               FROM purchases p JOIN leads l ON p.lead_id = l.id ORDER BY p.id DESC`, (err, results) => res.json(results));
 });
 
-app.listen(3000, () => {
-    console.log('Server running on port 3000');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
