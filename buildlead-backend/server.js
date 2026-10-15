@@ -6,17 +6,21 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// MySQL Connection Pool (Optimized for TiDB Cloud & Render)
+// MySQL Connection Pool (Optimized for TiDB Cloud & Render with Connection Timeout)
 const db = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'buildlead_market',
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
     port: process.env.DB_PORT || 4000,
-    ssl: process.env.DB_HOST?.includes('tidb') ? { rejectUnauthorized: true } : null,
+    ssl: {
+        minVersion: 'TLSv1.2',
+        rejectUnauthorized: true
+    },
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    connectTimeout: 30000 // 30 seconds timeout to prevent ETIMEDOUT
 });
 
 // Test Database Connection
@@ -103,6 +107,7 @@ app.get('/api/admin/purchases', (req, res) => {
     db.query(`SELECT p.*, l.client_name, l.project_name, l.phone as client_phone 
               FROM purchases p JOIN leads l ON p.lead_id = l.id ORDER BY p.id DESC`, (err, results) => res.json(results));
 });
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
