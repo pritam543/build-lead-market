@@ -1,7 +1,7 @@
 {
     "rewrites": [
         {
-            "source": "/(.*)",
+            "source": "/((?!assets|icons|favicon.png|flutter_bootstrap.js|main.dart.js|flutter.js|canvaskit|manifest.json).*)",
             "destination": "/index.html"
         }
     ]
