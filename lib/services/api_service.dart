@@ -10,7 +10,7 @@ class ApiService {
     required String name,
     required String phone,
     required String email,
-    required String firmName,
+    required String firm_name,
     required String role,
   }) async {
     try {
@@ -22,7 +22,7 @@ class ApiService {
           'name': name,
           'phone': phone,
           'email': email,
-          'firm_name': firmName,
+          'firm_name': firm_name,
           'role': role,
         }),
       );
